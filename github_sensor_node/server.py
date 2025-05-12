@@ -68,6 +68,12 @@ app = FastAPI(
     description="Handles GitHub webhooks and KOI-net protocol interactions."
 )
 
+@app.get("/health", tags=["System"])
+async def health_check():
+    """Basic health check for the service."""
+    return {"status": "healthy", "node_id": str(node.identity.rid) if node.identity else "uninitialized"}
+
+
 # --- GitHub Webhook Endpoint ---
 @app.post("/github/webhook", status_code=202) # GitHub expects 2xx for successful delivery
 async def github_webhook_listener(
