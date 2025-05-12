@@ -1,0 +1,12 @@
+aiohttp
+fastapi
+httpx
+koi-net>=1.0.0b17
+pydantic
+pydantic-settings
+python-dotenv
+PyGithub
+rid-lib>=3.2.3
+rich
+ruamel.yaml
+uvicorn[standard]

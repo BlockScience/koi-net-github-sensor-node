@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Log files
+*.log
+
+# Configuration overrides
+config.yaml
+
+# Python virtual environments
+.venv/
+env/
+venv/
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python type checker
+.mypy_cache/
+.pyright/
+
+# Test/coverage
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Custom tool metadata
+.koi
+.docs
+.ropeproject
+repomix-output.xml
+.env
