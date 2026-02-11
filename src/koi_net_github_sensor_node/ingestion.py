@@ -9,7 +9,6 @@ from koi_net_shared import GithubRepo
 from rid_lib.ext import Bundle
 
 from .github_client import GithubClient
-from .models import GithubRepoObject
 
 log = structlog.stdlib.get_logger()
 
