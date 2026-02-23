@@ -8,9 +8,9 @@ allow-direct-references = true
 [project]
 name = "koi-net-github-sensor-node"
 version = "0.1.0"
-description = "GitHub sensor node for KOI-net"
+description = "GitHub sensor node for KOI
 authors = [
-    {name = "Factory Droid", email = "droid@factory.ai"}
+    {name = "Luke Miller", email = "luke@block.science"}
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,15 +18,12 @@ license = {file = "LICENSE"}
 dependencies = [
     "httpx>=0.27.0",
     "koi-net",
-    "koi-net-shared",
+    "colorama>=0.4.6",
+    "rid_lib>=3.2.13",
 ]
 
 [project.optional-dependencies]
 dev = ["twine>=6.0", "build", "pytest>=7.0", "pytest-mock>=3.10"]
-
-[tool.uv.sources]
-koi-net = { workspace = true }
-koi-net-shared = { workspace = true }
 
 [tool.pyright]
 venvPath = "."
@@ -36,4 +33,3 @@ exclude = ["**/__pycache__"]
 pythonVersion = "3.10"
 typeCheckingMode = "basic"
 reportMissingImports = true
-extraPaths = ["src", "../koi-net/src", "../koi-net-shared/src"]

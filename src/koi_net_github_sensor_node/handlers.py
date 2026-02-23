@@ -3,7 +3,7 @@ from rid_lib.types import KoiNetNode
 from koi_net.processor.context import HandlerContext
 from koi_net.processor.handler import HandlerType, KnowledgeHandler, STOP_CHAIN
 from koi_net.processor.knowledge_object import KnowledgeObject
-from koi_net_shared import GithubRepo
+from rid_lib.types import GithubRepo
 from .models import GithubRepoObject
 
 log = structlog.stdlib.get_logger()

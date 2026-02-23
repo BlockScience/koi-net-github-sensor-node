@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 
 import structlog
-from koi_net_shared import GithubRepo
+from rid_lib.types import GithubRepo
 from rid_lib.ext import Bundle
 
 from .github_client import GithubClient

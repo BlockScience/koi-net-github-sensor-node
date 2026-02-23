@@ -1,6 +1,5 @@
 import httpx
 import logging
-import base64
 from typing import Dict, Any, Optional
 from .models import GithubRepoObject
 
