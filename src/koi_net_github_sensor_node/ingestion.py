@@ -17,7 +17,14 @@ class GithubIngestionService:
         self.config = config
         self.kobj_queue = kobj_queue
 
-        self.client = GithubClient(api_token=config.github.api_token)
+        api_token = config.github.api_token
+        if not api_token:
+            try:
+                api_token = config.env.GITHUB_API_TOKEN
+            except Exception:
+                api_token = ""
+
+        self.client = GithubClient(api_token=api_token)
 
         self.state_path = getattr(config.github, "state_path", "cache/github_state.json")
         self.state_lock = threading.Lock()
