@@ -1,0 +1,44 @@
+koi_net:
+  node_name: github_sensor
+  node_rid:
+  node_profile:
+    base_url: http://127.0.0.1:8007/koi-net
+    node_type: FULL
+    provides:
+      event:
+        - orn:github.repo
+      state:
+        - orn:github.repo
+        - orn:koi-net.node
+    public_key:
+  rid_types_of_interest:
+    - orn:koi-net.node
+  cache_directory_path: ./cache
+  private_key_pem_path: private_key.pem
+  event_worker:
+    queue_timeout: 0.1
+    max_buf_len: 5
+    max_wait_time: 1.0
+  kobj_worker:
+    queue_timeout: 0.1
+  first_contact:
+    rid:
+    url: http://127.0.0.1:8080/koi-net
+
+env:
+  priv_key_password: PRIV_KEY_PASSWORD
+  GITHUB_API_TOKEN: GITHUB_API_TOKEN
+  GITHUB_REPOSITORIES: GITHUB_REPOSITORIES
+  GITHUB_POLL_INTERVAL_SECONDS: GITHUB_POLL_INTERVAL_SECONDS
+  GITHUB_STATE_PATH: GITHUB_STATE_PATH
+
+server:
+  host: 127.0.0.1
+  port: 8007
+  path: /koi-net
+
+github:
+  api_token: ''
+  repositories: []
+  poll_interval_seconds: 600
+  state_path: cache/github_state.json

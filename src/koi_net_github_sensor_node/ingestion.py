@@ -17,21 +17,50 @@ class GithubIngestionService:
         self.config = config
         self.kobj_queue = kobj_queue
 
-        api_token = config.github.api_token
+        api_token = (config.github.api_token or "").strip()
+        env_api_token = (getattr(config.env, "GITHUB_API_TOKEN", "") or "").strip()
         if not api_token:
-            try:
-                api_token = config.env.GITHUB_API_TOKEN
-            except Exception:
-                api_token = ""
+            api_token = env_api_token
 
         self.client = GithubClient(api_token=api_token)
 
-        self.state_path = getattr(config.github, "state_path", "cache/github_state.json")
+        env_repositories = self._parse_csv(getattr(config.env, "GITHUB_REPOSITORIES", ""))
+        if env_repositories:
+            self.repositories = env_repositories
+        else:
+            self.repositories = config.github.repositories
+
+        self.poll_interval = self._resolve_int(
+            env_value=getattr(config.env, "GITHUB_POLL_INTERVAL_SECONDS", ""),
+            fallback=config.github.poll_interval_seconds,
+            label="GITHUB_POLL_INTERVAL_SECONDS",
+        )
+
+        env_state_path = (getattr(config.env, "GITHUB_STATE_PATH", "") or "").strip()
+        self.state_path = env_state_path or getattr(config.github, "state_path", "cache/github_state.json")
         self.state_lock = threading.Lock()
         self.state = self._load_state()
 
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
+
+    @staticmethod
+    def _parse_csv(raw_value: str) -> list[str]:
+        raw_value = (raw_value or "").strip()
+        if not raw_value:
+            return []
+        return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+    @staticmethod
+    def _resolve_int(env_value: str, fallback: int, label: str) -> int:
+        env_value = (env_value or "").strip()
+        if not env_value:
+            return fallback
+        try:
+            return int(env_value)
+        except ValueError:
+            log.warning("Invalid %s=%r, using fallback=%s", label, env_value, fallback)
+            return fallback
 
     def _load_state(self) -> dict:
         try:
@@ -56,7 +85,7 @@ class GithubIngestionService:
         if self._thread and self._thread.is_alive():
             return
 
-        poll_interval = self.config.github.poll_interval_seconds
+        poll_interval = self.poll_interval
         log.info("Github ingestion starting; interval=%ss", poll_interval)
         self._stop_event.clear()
 
@@ -84,7 +113,7 @@ class GithubIngestionService:
         self._thread = None
 
     def poll_once(self):
-        repositories = self.config.github.repositories
+        repositories = self.repositories
         if not repositories:
             log.debug("No repositories configured to poll.")
             return

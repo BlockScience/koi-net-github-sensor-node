@@ -5,13 +5,16 @@ from koi_net.config.full_node import (
     NodeProvides,
     ServerConfig,
 )
-from koi_net.config.core import EnvConfig
+from koi_net.config.core import EnvConfig, NodeContact
 from pydantic import BaseModel, Field
 from rid_lib.types import KoiNetNode, GithubRepo
 
 
 class GithubEnvConfig(EnvConfig):
     GITHUB_API_TOKEN: str = "GITHUB_API_TOKEN"
+    GITHUB_REPOSITORIES: str = "GITHUB_REPOSITORIES"
+    GITHUB_POLL_INTERVAL_SECONDS: str = "GITHUB_POLL_INTERVAL_SECONDS"
+    GITHUB_STATE_PATH: str = "GITHUB_STATE_PATH"
 
 
 class GithubConfig(BaseModel):
@@ -33,5 +36,6 @@ class GithubSensorConfig(FullNodeConfig):
             ),
         ),
         rid_types_of_interest=[KoiNetNode],
+        first_contact=NodeContact(url="http://127.0.0.1:8080/koi-net"),
     )
     env: GithubEnvConfig = Field(default_factory=GithubEnvConfig)

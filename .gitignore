@@ -18,7 +18,8 @@ bin/
 priv_key.pem
 private_key.pem
 
-# Runtime state and cache
+# Generated node runtime/config
+config.yaml
 .rid_cache/
 rid_cache/
 cache/
@@ -28,14 +29,14 @@ events_queue.json
 log.ndjson
 *.ndjson
 *.ndjson.*
+.run.log
+.run.*.log
 
-# Build artifacts
+# Build/test artifacts
 build/
 dist/
 *.egg-info/
+.pytest_cache/
 
-# Local-only overrides
-config.local.yaml
-
-# OS files
+# OS/editor noise
 .DS_Store
