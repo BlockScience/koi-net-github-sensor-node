@@ -16,5 +16,6 @@ clean:
 	rm -rf .tox .nox
 	rm -rf .ipynb_checkpoints */.ipynb_checkpoints */*/.ipynb_checkpoints
 	rm -rf .DS_Store */.DS_Store */*/.DS_Store
-	rm -rf *.ndjson
+	rm -rf *.ndjson *.ndjson.*
 	rm -rf .rid_cache
+	rm -rf state

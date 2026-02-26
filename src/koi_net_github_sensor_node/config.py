@@ -26,7 +26,7 @@ class GithubConfig(BaseModel):
 
 class GithubSensorConfig(FullNodeConfig):
     github: GithubConfig = Field(default_factory=GithubConfig)
-    server: ServerConfig = ServerConfig(port=8007)
+    server: ServerConfig = ServerConfig(port=8082)
     koi_net: KoiNetConfig = KoiNetConfig(
         node_name="github_sensor",
         node_profile=NodeProfile(

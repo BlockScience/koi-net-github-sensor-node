@@ -39,6 +39,15 @@ def github_bundle_handler(ctx: HandlerContext, kobj: KnowledgeObject):
     log.info("Processed GithubRepo bundle: %s", kobj.rid)
 
 
+@KnowledgeHandler.create(
+    HandlerType.Final,
+    rid_types=[GithubRepo],
+)
+def logging_handler(ctx: HandlerContext, kobj: KnowledgeObject):
+    """Log processed knowledge objects."""
+    log.info("Processed %s: %s", type(kobj.rid).__name__, kobj.rid)
+
+
 # Export handlers for GithubSensorNode class
 PREPEND_HANDLERS = [
     suppress_peer_node_rebroadcast,
@@ -46,6 +55,7 @@ PREPEND_HANDLERS = [
 
 APPEND_HANDLERS = [
     github_bundle_handler,
+    logging_handler,
 ]
 
 # Default export keeps local ordering; core will splice around FullNode handlers
