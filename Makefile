@@ -1,10 +1,10 @@
 .PHONY: sync run start clean
 
 sync:
-	uv sync --refresh --reinstall
+	env -u VIRTUAL_ENV uv sync --refresh --reinstall
 
 run:
-	UV_ENV_FILE=.env uv run python -m koi_net_github_sensor_node
+	env -u VIRTUAL_ENV UV_ENV_FILE=.env uv run python -m koi_net_github_sensor_node
 
 start: sync run
 

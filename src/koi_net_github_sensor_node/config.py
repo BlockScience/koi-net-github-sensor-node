@@ -1,3 +1,5 @@
+import os
+
 from koi_net.config.full_node import (
     FullNodeConfig,
     KoiNetConfig,
@@ -6,7 +8,7 @@ from koi_net.config.full_node import (
     ServerConfig,
 )
 from koi_net.config.core import EnvConfig, NodeContact
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from rid_lib.types import KoiNetNode, GithubRepo
 
 
@@ -15,6 +17,8 @@ class GithubEnvConfig(EnvConfig):
     GITHUB_REPOSITORIES: str = "GITHUB_REPOSITORIES"
     GITHUB_POLL_INTERVAL_SECONDS: str = "GITHUB_POLL_INTERVAL_SECONDS"
     GITHUB_STATE_PATH: str = "GITHUB_STATE_PATH"
+    COORDINATOR_RID: str = "COORDINATOR_RID"
+    COORDINATOR_URL: str = "COORDINATOR_URL"
 
 
 class GithubConfig(BaseModel):
@@ -39,3 +43,16 @@ class GithubSensorConfig(FullNodeConfig):
         first_contact=NodeContact(url="http://127.0.0.1:8080/koi-net"),
     )
     env: GithubEnvConfig = Field(default_factory=GithubEnvConfig)
+
+    @model_validator(mode="after")
+    def apply_coordinator_contact_from_env(self):
+        """Allow first_contact overrides before config.yaml exists."""
+        coordinator_rid = (os.getenv("COORDINATOR_RID") or "").strip()
+        coordinator_url = (os.getenv("COORDINATOR_URL") or "").strip()
+
+        if coordinator_rid:
+            self.koi_net.first_contact.rid = KoiNetNode.from_string(coordinator_rid)
+        if coordinator_url:
+            self.koi_net.first_contact.url = coordinator_url
+
+        return self
