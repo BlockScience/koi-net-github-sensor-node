@@ -1,13 +1,14 @@
 import os
 
-from koi_net.config.full_node import (
+from koi_net.config import (
+    EnvConfig,
     FullNodeConfig,
+    FullNodeProfile,
     KoiNetConfig,
-    NodeProfile,
+    NodeContact,
     NodeProvides,
     ServerConfig,
 )
-from koi_net.config.core import EnvConfig, NodeContact
 from pydantic import BaseModel, Field, model_validator
 from rid_lib.types import KoiNetNode, GithubRepo
 
@@ -33,7 +34,7 @@ class GithubSensorConfig(FullNodeConfig):
     server: ServerConfig = ServerConfig(port=8082)
     koi_net: KoiNetConfig = KoiNetConfig(
         node_name="github_sensor",
-        node_profile=NodeProfile(
+        node_profile=FullNodeProfile(
             provides=NodeProvides(
                 event=[GithubRepo],
                 state=[GithubRepo, KoiNetNode],
