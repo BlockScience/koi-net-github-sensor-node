@@ -20,6 +20,9 @@ class GithubEnvConfig(EnvConfig):
     GITHUB_STATE_PATH: str = "GITHUB_STATE_PATH"
     COORDINATOR_RID: str = "COORDINATOR_RID"
     COORDINATOR_URL: str = "COORDINATOR_URL"
+    # Mock data configuration
+    USE_MOCK_DATA: str = "USE_MOCK_DATA"
+    MOCK_DATA_PATH: str = "MOCK_DATA_PATH"
 
 
 class GithubConfig(BaseModel):
@@ -27,6 +30,10 @@ class GithubConfig(BaseModel):
     repositories: list[str] = Field(default_factory=list)
     poll_interval_seconds: int = Field(default=600)
     state_path: str = Field(default="./state/github_state.json")
+    # Mock data configuration
+    use_mock_data: bool = False
+    mock_data_path: str | None = None
+    mock_poll_interval_seconds: int = 60
 
 
 class GithubSensorConfig(FullNodeConfig):

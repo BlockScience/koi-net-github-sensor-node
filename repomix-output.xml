@@ -1,0 +1,534 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: src/**/*
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+src/
+  koi_net_github_sensor_node/
+    __init__.py
+    __main__.py
+    config.py
+    core.py
+    github_client.py
+    handlers.py
+    ingestion.py
+    models.py
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/koi_net_github_sensor_node/__init__.py">
+
+</file>
+
+<file path="src/koi_net_github_sensor_node/models.py">
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+
+class GithubRepoObject(BaseModel):
+    """Payload for a GitHub Repository event."""
+    owner: str
+    repo: str
+    description: Optional[str] = None
+    stars: int = 0
+    forks: int = 0
+    updated_at: Optional[datetime] = None
+    readme_content: Optional[str] = None
+    license: Optional[str] = None
+    default_branch: str = "main"
+</file>
+
+<file path="src/koi_net_github_sensor_node/__main__.py">
+from rid_lib.ext import Bundle
+from .core import GithubSensorNode
+
+if __name__ == "__main__":
+    node = GithubSensorNode()
+    
+    identity_bundle = Bundle.generate(
+        rid=node.identity.rid,
+        contents=node.identity.profile.model_dump()
+    )
+    node.cache.write(identity_bundle)
+    # --------------------------------------
+
+    node.run()
+</file>
+
+<file path="src/koi_net_github_sensor_node/core.py">
+import structlog
+from koi_net.core import FullNode
+
+from . import handlers
+from .config import GithubSensorConfig
+from .ingestion import GithubIngestionService
+
+log = structlog.stdlib.get_logger()
+
+
+class GithubSensorNode(FullNode):
+    config_schema = GithubSensorConfig
+    suppress_peer_node_rebroadcast_handler = (
+        handlers.SuppressPeerNodeRebroadcastHandler
+    )
+    github_bundle_handler = handlers.GithubBundleHandler
+    github_logging_handler = handlers.GithubLoggingHandler
+    ingestion_service: GithubIngestionService = GithubIngestionService
+
+if __name__ == "__main__":
+    GithubSensorNode().run()
+</file>
+
+<file path="src/koi_net_github_sensor_node/github_client.py">
+import httpx
+import logging
+from typing import Dict, Any, Optional
+from .models import GithubRepoObject
+
+log = logging.getLogger(__name__)
+
+class GithubClient:
+    def __init__(self, api_token: Optional[str] = None):
+        self.headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "koi-net-github-sensor"
+        }
+        if api_token:
+            self.headers["Authorization"] = f"Bearer {api_token}"
+        
+        self.client = httpx.Client(headers=self.headers, timeout=30.0)
+        self.base_url = "https://api.github.com"
+
+    def get_repo_metadata(self, owner: str, repo: str) -> Optional[Dict[str, Any]]:
+        """Fetch repository metadata."""
+        url = f"{self.base_url}/repos/{owner}/{repo}"
+        try:
+            resp = self.client.get(url)
+            if resp.status_code == 404:
+                log.warning(f"Repo not found: {owner}/{repo}")
+                return None
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            log.error(f"Error fetching repo metadata for {owner}/{repo}: {e}")
+            return None
+
+    def get_readme(self, owner: str, repo: str, default_branch: str = "main") -> str:
+        """Fetch README content (raw markdown)."""
+        # Try explicit raw accept header for content
+        headers = self.headers.copy()
+        headers["Accept"] = "application/vnd.github.raw+json"
+        
+        url = f"{self.base_url}/repos/{owner}/{repo}/readme"
+        try:
+            resp = self.client.get(url, headers=headers)
+            if resp.status_code == 404:
+                return ""
+            resp.raise_for_status()
+            return resp.text
+        except Exception as e:
+            log.error(f"Error fetching README for {owner}/{repo}: {e}")
+            return ""
+
+    def fetch_repo_object(self, owner: str, repo: str) -> Optional[GithubRepoObject]:
+        """Fetch and assemble the full GithubRepoObject."""
+        meta = self.get_repo_metadata(owner, repo)
+        if not meta:
+            return None
+        
+        default_branch = meta.get("default_branch", "main")
+        readme = self.get_readme(owner, repo, default_branch)
+        
+        # Parse updated_at
+        updated_at = meta.get("updated_at")
+        
+        license_name = None
+        if meta.get("license"):
+            license_name = meta["license"].get("name")
+
+        return GithubRepoObject(
+            owner=owner,
+            repo=repo,
+            description=meta.get("description"),
+            stars=meta.get("stargazers_count", 0),
+            forks=meta.get("forks_count", 0),
+            updated_at=updated_at,
+            readme_content=readme,
+            license=license_name,
+            default_branch=default_branch
+        )
+</file>
+
+<file path="src/koi_net_github_sensor_node/handlers.py">
+from dataclasses import dataclass
+from typing import Any, TypeAlias
+
+import structlog
+from koi_net.components import (
+    Cache,
+    EventQueue,
+    KobjQueue,
+    NetworkGraph,
+    NetworkResolver,
+    NodeIdentity,
+    RequestHandler,
+)
+from koi_net.components.interfaces import HandlerType, KnowledgeHandler, STOP_CHAIN
+from koi_net.protocol.knowledge_object import KnowledgeObject
+from rid_lib.types import GithubRepo, KoiNetNode
+
+from .models import GithubRepoObject
+
+log = structlog.stdlib.get_logger()
+
+
+@dataclass
+class NodeHandler(KnowledgeHandler):
+    identity: NodeIdentity
+    cache: Cache
+    config: Any
+    event_queue: EventQueue
+    kobj_queue: KobjQueue
+    request_handler: RequestHandler
+    resolver: NetworkResolver
+    graph: NetworkGraph
+
+
+@dataclass
+class PrependNodeHandler(NodeHandler):
+    def __post_init__(self):
+        super().__post_init__()
+        if self in self.pipeline.knowledge_handlers:
+            self.pipeline.knowledge_handlers.remove(self)
+        self.pipeline.knowledge_handlers.insert(0, self)
+
+
+HandlerContext: TypeAlias = NodeHandler
+
+
+def suppress_peer_node_rebroadcast(ctx: HandlerContext, kobj: KnowledgeObject):
+    """Prevent forwarding other nodes' identity events."""
+    if kobj.source and kobj.source != ctx.identity.rid:
+        return STOP_CHAIN
+
+
+def github_bundle_handler(ctx: HandlerContext, kobj: KnowledgeObject):
+    """Validate GithubRepo bundles."""
+    try:
+        GithubRepoObject.model_validate(kobj.contents or {})
+    except Exception as e:
+        log.warning("Invalid GithubRepoObject payload for %s: %s", kobj.rid, e)
+        return STOP_CHAIN
+
+    log.info("Processed GithubRepo bundle: %s", kobj.rid)
+
+
+def logging_handler(ctx: HandlerContext, kobj: KnowledgeObject):
+    """Log processed knowledge objects."""
+    log.info("Processed %s: %s", type(kobj.rid).__name__, kobj.rid)
+
+
+@dataclass
+class SuppressPeerNodeRebroadcastHandler(PrependNodeHandler):
+    handler_type = HandlerType.Network
+    rid_types = (KoiNetNode,)
+
+    def handle(self, kobj: KnowledgeObject):
+        return suppress_peer_node_rebroadcast(self, kobj)
+
+
+@dataclass
+class GithubBundleHandler(NodeHandler):
+    handler_type = HandlerType.Bundle
+    rid_types = (GithubRepo,)
+
+    def handle(self, kobj: KnowledgeObject):
+        return github_bundle_handler(self, kobj)
+
+
+@dataclass
+class GithubLoggingHandler(NodeHandler):
+    handler_type = HandlerType.Final
+    rid_types = (GithubRepo,)
+
+    def handle(self, kobj: KnowledgeObject):
+        return logging_handler(self, kobj)
+</file>
+
+<file path="src/koi_net_github_sensor_node/ingestion.py">
+import json
+import os
+import threading
+import time
+from datetime import datetime
+
+import structlog
+from rid_lib.types import GithubRepo
+from rid_lib.ext import Bundle
+
+from .github_client import GithubClient
+
+log = structlog.stdlib.get_logger()
+
+class GithubIngestionService:
+    def __init__(self, config, kobj_queue):
+        self.config = config
+        self.kobj_queue = kobj_queue
+
+        api_token = (config.github.api_token or "").strip()
+        env_api_token = (getattr(config.env, "GITHUB_API_TOKEN", "") or "").strip()
+        if not api_token:
+            api_token = env_api_token
+
+        self.client = GithubClient(api_token=api_token)
+
+        env_repositories = self._parse_csv(getattr(config.env, "GITHUB_REPOSITORIES", ""))
+        if env_repositories:
+            self.repositories = env_repositories
+        else:
+            self.repositories = config.github.repositories
+
+        self.poll_interval = self._resolve_int(
+            env_value=getattr(config.env, "GITHUB_POLL_INTERVAL_SECONDS", ""),
+            fallback=config.github.poll_interval_seconds,
+            label="GITHUB_POLL_INTERVAL_SECONDS",
+        )
+
+        env_state_path = (getattr(config.env, "GITHUB_STATE_PATH", "") or "").strip()
+        self.state_path = env_state_path or getattr(config.github, "state_path", "cache/github_state.json")
+        self.state_lock = threading.Lock()
+        self.state = self._load_state()
+
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    @staticmethod
+    def _parse_csv(raw_value: str) -> list[str]:
+        raw_value = (raw_value or "").strip()
+        if not raw_value:
+            return []
+        return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+    @staticmethod
+    def _resolve_int(env_value: str, fallback: int, label: str) -> int:
+        env_value = (env_value or "").strip()
+        if not env_value:
+            return fallback
+        try:
+            return int(env_value)
+        except ValueError:
+            log.warning("Invalid %s=%r, using fallback=%s", label, env_value, fallback)
+            return fallback
+
+    def _load_state(self) -> dict:
+        try:
+            with open(self.state_path, "r") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
+        except Exception as e:
+            log.warning("Failed to load state file %s: %s", self.state_path, e)
+            return {}
+
+    def _save_state(self):
+        try:
+            os.makedirs(os.path.dirname(self.state_path), exist_ok=True)
+            with self.state_lock:
+                with open(self.state_path, "w") as f:
+                    json.dump(self.state, f, indent=2, default=str)
+        except Exception as e:
+            log.warning("Failed to write state file %s: %s", self.state_path, e)
+
+    def start(self):
+        if self._thread and self._thread.is_alive():
+            return
+
+        poll_interval = self.poll_interval
+        log.info("Github ingestion starting; interval=%ss", poll_interval)
+        self._stop_event.clear()
+
+        def _run():
+            while not self._stop_event.is_set():
+                start = time.time()
+                try:
+                    self.poll_once()
+                except Exception as e:
+                    log.error("Github ingestion poll failed: %s", e)
+
+                elapsed = time.time() - start
+                remaining = max(0.0, poll_interval - elapsed)
+                if remaining:
+                    self._stop_event.wait(remaining)
+
+        self._thread = threading.Thread(target=_run, name="github-ingestion", daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        if not self._thread:
+            return
+        self._stop_event.set()
+        self._thread.join(timeout=5)
+        self._thread = None
+
+    def poll_once(self):
+        repositories = self.repositories
+        if not repositories:
+            log.debug("No repositories configured to poll.")
+            return
+
+        log.info("Polling %d GitHub repositories...", len(repositories))
+
+        changes_detected = False
+
+        for repo_str in repositories:
+            if "/" not in repo_str:
+                log.warning("Invalid repo string '%s'; must be owner/repo", repo_str)
+                continue
+
+            owner, repo = repo_str.split("/", 1)
+
+            log.info(f"Fetching metadata for {owner}/{repo}...")
+            # Fetch minimal metadata first to check updated_at (not implemented in simple client,
+            # we just fetch the object. Optimization for later.)
+            repo_obj = self.client.fetch_repo_object(owner, repo)
+            if not repo_obj:
+                log.warning(f"Failed to fetch repo object for {owner}/{repo}")
+                continue
+
+            current_updated_at = repo_obj.updated_at
+            log.info(f"Current updated_at for {owner}/{repo}: {current_updated_at}")
+
+            # Check state
+            # We store the updated_at string in state
+            last_known_str = self.state.get(repo_str)
+            last_known = datetime.strptime(last_known_str, '%Y-%m-%d %H:%M:%S.%f') if last_known_str else None
+            log.info(f"Last known updated_at for {owner}/{repo}: {last_known}")
+
+            should_update = False
+            if not last_known:
+                should_update = True
+            elif current_updated_at and current_updated_at > last_known:
+                should_update = True
+
+            if should_update:
+                log.info("Change detected for %s", repo_str)
+                rid = GithubRepo(owner, repo)
+                bundle = Bundle.generate(rid=rid, contents=repo_obj.model_dump(mode="json"))
+
+                self.kobj_queue.push(bundle=bundle)
+
+                # Update state
+                self.state[repo_str] = str(current_updated_at)
+                changes_detected = True
+            else:
+                log.info(f"No changes detected for {owner}/{repo}")
+
+        if changes_detected:
+            self._save_state()
+        else:
+            log.info("No GitHub changes detected")
+</file>
+
+<file path="src/koi_net_github_sensor_node/config.py">
+import os
+
+from koi_net.config import (
+    EnvConfig,
+    FullNodeConfig,
+    FullNodeProfile,
+    KoiNetConfig,
+    NodeContact,
+    NodeProvides,
+    ServerConfig,
+)
+from pydantic import BaseModel, Field, model_validator
+from rid_lib.types import KoiNetNode, GithubRepo
+
+
+class GithubEnvConfig(EnvConfig):
+    GITHUB_API_TOKEN: str = "GITHUB_API_TOKEN"
+    GITHUB_REPOSITORIES: str = "GITHUB_REPOSITORIES"
+    GITHUB_POLL_INTERVAL_SECONDS: str = "GITHUB_POLL_INTERVAL_SECONDS"
+    GITHUB_STATE_PATH: str = "GITHUB_STATE_PATH"
+    COORDINATOR_RID: str = "COORDINATOR_RID"
+    COORDINATOR_URL: str = "COORDINATOR_URL"
+
+
+class GithubConfig(BaseModel):
+    api_token: str = Field(default="")
+    repositories: list[str] = Field(default_factory=list)
+    poll_interval_seconds: int = Field(default=600)
+    state_path: str = Field(default="./state/github_state.json")
+
+
+class GithubSensorConfig(FullNodeConfig):
+    github: GithubConfig = Field(default_factory=GithubConfig)
+    server: ServerConfig = ServerConfig(port=8082)
+    koi_net: KoiNetConfig = KoiNetConfig(
+        node_name="github_sensor",
+        node_profile=FullNodeProfile(
+            provides=NodeProvides(
+                event=[GithubRepo],
+                state=[GithubRepo, KoiNetNode],
+            ),
+        ),
+        rid_types_of_interest=[KoiNetNode],
+        first_contact=NodeContact(url="http://127.0.0.1:8080/koi-net"),
+    )
+    env: GithubEnvConfig = Field(default_factory=GithubEnvConfig)
+
+    @model_validator(mode="after")
+    def apply_coordinator_contact_from_env(self):
+        """Allow first_contact overrides before config.yaml exists."""
+        coordinator_rid = (os.getenv("COORDINATOR_RID") or "").strip()
+        coordinator_url = (os.getenv("COORDINATOR_URL") or "").strip()
+
+        if coordinator_rid:
+            self.koi_net.first_contact.rid = KoiNetNode.from_string(coordinator_rid)
+        if coordinator_url:
+            self.koi_net.first_contact.url = coordinator_url
+
+        return self
+</file>
+
+</files>

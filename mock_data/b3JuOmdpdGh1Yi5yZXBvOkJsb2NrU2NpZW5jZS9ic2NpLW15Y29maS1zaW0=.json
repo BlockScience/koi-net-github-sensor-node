@@ -1,0 +1,18 @@
+{
+  "manifest": {
+    "rid": "orn:github.repo:BlockScience/bsci-mycofi-sim",
+    "timestamp": "2026-04-02T19:59:46.203650Z",
+    "sha256_hash": "f7ff1ad560fadf37b2b2462eb7e6fbdd41ccdf45b9349b2938ef5c6be7a862aa"
+  },
+  "contents": {
+    "owner": "BlockScience",
+    "repo": "bsci-mycofi-sim",
+    "description": "# bsci-mycofi-sim\n\n**Repository Owner**: BlockScience\n**Maintainer**: @CarolinaRiascos, @phacker3\n\n## Overview\nThis repository contains the stochastic network simulation for the BioFi ecosystem.",
+    "stars": 17,
+    "forks": 7,
+    "updated_at": "2025-12-03T19:59:46.203642+00:00",
+    "readme_content": "# bsci-mycofi-sim\n\n**Repository Owner**: BlockScience\n**Maintainer**: @CarolinaRiascos, @phacker3\n\n## Overview\nThis repository contains the stochastic network simulation for the BioFi ecosystem. Rather than a pure token dynamic simulation, this specifically models the combinatorial optimization of sensor network routing and yield distributions based on real-world ecological telemetry.\n\n## Background\n* **Cryptoeconomic constraints**: Dictated by [Jakob Hackel's Mechanism Spec](https://hackmd.io/internal-mycofi-mechanism)\n* **Optimization Method**: Derived from Carolina Riascos' stochastic modeling research.\n\n## Running the Engine\nRequirements: `scipy`, `networkx`, `numpy`, `pandas`.\n```bash\npython network_sim.py\n```\nOutput data is pushed natively to the GDrive ingest folder via the `BlockScience-Auth` daemon.\n",
+    "license": "MIT",
+    "default_branch": "main"
+  }
+}

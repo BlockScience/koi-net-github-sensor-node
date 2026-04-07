@@ -1,0 +1,18 @@
+{
+  "manifest": {
+    "rid": "orn:github.repo:BlockScience/bsci-koi-bridge-demo",
+    "timestamp": "2026-04-02T19:59:46.203276Z",
+    "sha256_hash": "ea2e2bbda75e23af0482e2203e611d4bc27f9ff21060f979003d8b1dfa327193"
+  },
+  "contents": {
+    "owner": "BlockScience",
+    "repo": "bsci-koi-bridge-demo",
+    "description": "# bsci-koi-bridge-demo\n\n**Version**: 1.",
+    "stars": 13,
+    "forks": 3,
+    "updated_at": "2025-11-03T19:59:46.203265+00:00",
+    "readme_content": "# bsci-koi-bridge-demo\n\n**Version**: 1.2.0\n**Maintainers**: @sayertindall, @JEJodesty\n\n## Overview\nThis repository contains the cadCAD simulation model for the Knowledge Organization Infrastructure (KOI) bridge. It evaluates the network topology and cryptoeconomic stability of curation markets applied to internal research entities.\n\n## Architecture\nThis simulation relies on multi-scale modeling principles provided by `@danlessa` (Danilo) and stochastic optimizations drafted by `@CarolinaRiascos`.\n\nFor deep dives into the theoretical underpinnings:\n1. [KOI Protocol: Bridge Research & Knowledge Organization Infrastructure](https://hackmd.io/internal-koi-bridge)\n2. [Token Physics Modeling for KOI-Net Economic Incentives](https://hackmd.io/internal-cadcad-physics)\n\n## Getting Started\nEnsure you are using the latest `cadCAD` release. Run the simulation pipeline via `python model.py`. Outputs are routed automatically to the associated GDrive bucket managed by Samuel Young.\n",
+    "license": "MIT",
+    "default_branch": "main"
+  }
+}
