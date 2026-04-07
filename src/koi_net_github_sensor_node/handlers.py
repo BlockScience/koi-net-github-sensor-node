@@ -1,32 +1,55 @@
+from dataclasses import dataclass
+from typing import Any, TypeAlias
+
 import structlog
-from rid_lib.types import KoiNetNode
-from koi_net.processor.context import HandlerContext
-from koi_net.processor.handler import HandlerType, KnowledgeHandler, STOP_CHAIN
-from koi_net.processor.knowledge_object import KnowledgeObject
-from rid_lib.types import GithubRepo
+from koi_net.components import (
+    Cache,
+    EventQueue,
+    KobjQueue,
+    NetworkGraph,
+    NetworkResolver,
+    NodeIdentity,
+    RequestHandler,
+)
+from koi_net.components.interfaces import HandlerType, KnowledgeHandler, STOP_CHAIN
+from koi_net.protocol.knowledge_object import KnowledgeObject
+from rid_lib.types import GithubRepo, KoiNetNode
+
 from .models import GithubRepoObject
 
 log = structlog.stdlib.get_logger()
 
 
-@KnowledgeHandler.create(
-    HandlerType.Network,
-    rid_types=[KoiNetNode],
-)
+@dataclass
+class NodeHandler(KnowledgeHandler):
+    identity: NodeIdentity
+    cache: Cache
+    config: Any
+    event_queue: EventQueue
+    kobj_queue: KobjQueue
+    request_handler: RequestHandler
+    resolver: NetworkResolver
+    graph: NetworkGraph
+
+
+@dataclass
+class PrependNodeHandler(NodeHandler):
+    def __post_init__(self):
+        super().__post_init__()
+        if self in self.pipeline.knowledge_handlers:
+            self.pipeline.knowledge_handlers.remove(self)
+        self.pipeline.knowledge_handlers.insert(0, self)
+
+
+HandlerContext: TypeAlias = NodeHandler
+
+
 def suppress_peer_node_rebroadcast(ctx: HandlerContext, kobj: KnowledgeObject):
-    """Prevent forwarding other nodes' identity events.
-
-    If the node event did not originate from this node, stop the network handler
-    chain to avoid rebroadcast loops.
-    """
-
+    """Prevent forwarding other nodes' identity events."""
     if kobj.source and kobj.source != ctx.identity.rid:
         return STOP_CHAIN
 
-@KnowledgeHandler.create(
-    HandlerType.Bundle,
-    rid_types=[GithubRepo]
-)
+
 def github_bundle_handler(ctx: HandlerContext, kobj: KnowledgeObject):
     """Validate GithubRepo bundles."""
     try:
@@ -34,29 +57,38 @@ def github_bundle_handler(ctx: HandlerContext, kobj: KnowledgeObject):
     except Exception as e:
         log.warning("Invalid GithubRepoObject payload for %s: %s", kobj.rid, e)
         return STOP_CHAIN
-    
-    # Simple pass-through logging
+
     log.info("Processed GithubRepo bundle: %s", kobj.rid)
 
 
-@KnowledgeHandler.create(
-    HandlerType.Final,
-    rid_types=[GithubRepo],
-)
 def logging_handler(ctx: HandlerContext, kobj: KnowledgeObject):
     """Log processed knowledge objects."""
     log.info("Processed %s: %s", type(kobj.rid).__name__, kobj.rid)
 
 
-# Export handlers for GithubSensorNode class
-PREPEND_HANDLERS = [
-    suppress_peer_node_rebroadcast,
-]
+@dataclass
+class SuppressPeerNodeRebroadcastHandler(PrependNodeHandler):
+    handler_type = HandlerType.Network
+    rid_types = (KoiNetNode,)
 
-APPEND_HANDLERS = [
-    github_bundle_handler,
-    logging_handler,
-]
+    def handle(self, kobj: KnowledgeObject):
+        return suppress_peer_node_rebroadcast(self, kobj)
 
-# Default export keeps local ordering; core will splice around FullNode handlers
-knowledge_handlers = PREPEND_HANDLERS + APPEND_HANDLERS
+
+@dataclass
+class GithubBundleHandler(NodeHandler):
+    handler_type = HandlerType.Bundle
+    rid_types = (GithubRepo,)
+
+    def handle(self, kobj: KnowledgeObject):
+        return github_bundle_handler(self, kobj)
+
+
+@dataclass
+class GithubLoggingHandler(NodeHandler):
+    handler_type = HandlerType.Final
+    rid_types = (GithubRepo,)
+
+    def handle(self, kobj: KnowledgeObject):
+        return logging_handler(self, kobj)
+

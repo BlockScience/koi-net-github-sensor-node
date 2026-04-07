@@ -10,12 +10,11 @@ log = structlog.stdlib.get_logger()
 
 class GithubSensorNode(FullNode):
     config_schema = GithubSensorConfig
-    # Place prepend handlers before defaults, then append handlers
-    knowledge_handlers = (
-        handlers.PREPEND_HANDLERS
-        + FullNode.knowledge_handlers
-        + handlers.APPEND_HANDLERS
+    suppress_peer_node_rebroadcast_handler = (
+        handlers.SuppressPeerNodeRebroadcastHandler
     )
+    github_bundle_handler = handlers.GithubBundleHandler
+    github_logging_handler = handlers.GithubLoggingHandler
     ingestion_service: GithubIngestionService = GithubIngestionService
 
 if __name__ == "__main__":
