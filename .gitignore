@@ -42,3 +42,4 @@ dist/
 .DS_Store
 uv.lock
 /.vscode
+dropped_logs.txt
